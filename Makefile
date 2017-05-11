@@ -21,7 +21,7 @@
 # A name common to all output files (elf, map, hex, bin, lst)
 TARGET     = demo
 
-# Take a look into $(CUBE_DIR)/Drivers/BSP for available BSPs
+# Take a look into $(CUBE_DIR)/Drivers/BSP for available BSPs , BSP = Board Supported Package
 # name needed in upper case and lower case
 BOARD      = STM32F446ZE-Nucleo
 BOARD_UC   = STM32F4xx_Nucleo_144
@@ -136,7 +136,7 @@ all: $(TARGET).bin
 
 -include $(DEPS)
 
-dirs: dep obj cube
+dirs: dep obj cube  
 dep obj src:
 	@echo "[MKDIR]   $@"
 	$Qmkdir -p $@
@@ -177,11 +177,12 @@ debug:
 
 cube:
 	rm -fr $(CUBE_DIR)
-	wget -O /tmp/cube.zip $(CUBE_URL)
-	unzip /tmp/cube.zip
+	wget --tries=45 -O $$PWD/cube.zip $(CUBE_URL) 
+	unzip $$PWD/cube.zip
 	mv STM32Cube* $(CUBE_DIR)
 	chmod -R u+w $(CUBE_DIR)
-	rm -f /tmp/cube.zip
+	rm -f $$PWD/cube.zip
+
 
 template: cube src
 	cp -ri $(CUBE_DIR)/Projects/$(BOARD)/$(EXAMPLE)/Src/* src

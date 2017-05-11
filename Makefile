@@ -23,12 +23,12 @@ TARGET     = demo
 
 # Take a look into $(CUBE_DIR)/Drivers/BSP for available BSPs , BSP = Board Supported Package
 # name needed in upper case and lower case
-BOARD      = STM32F446ZE-Nucleo
-BOARD_UC   = STM32F4xx_Nucleo_144
-BOARD_LC   = stm32f4xx_nucleo_144
+BOARD      = STM32F401RE-Nucleo
+BOARD_UC   = STM32F4xx_Nucleo
+BOARD_LC   = stm32f4xx_nucleo
 BSP_BASE   = $(BOARD_LC)
 
-OCDFLAGS   = -f board/stm32f4discovery.cfg
+OCDFLAGS   = -f board/st_nucleo_f4.cfg
 GDBFLAGS   =
 
 #EXAMPLE   = Templates
@@ -36,12 +36,12 @@ EXAMPLE    = Examples/GPIO/GPIO_IOToggle
 
 # MCU family and type in various capitalizations o_O
 MCU_FAMILY = stm32f4xx
-MCU_LC     = stm32f446xx
-MCU_MC     = STM32F446xx
-MCU_UC     = STM32F446ZE
+MCU_LC     = stm32f401xx
+MCU_MC     = STM32F401xx
+MCU_UC     = STM32F401RE
 
 # path of the ld-file inside the example directories
-LDFILE     = $(EXAMPLE)/SW4STM32/$(BOARD_UC)/$(MCU_UC)Tx_FLASH.ld
+LDFILE     = $(EXAMPLE)/SW4STM32/STM32F4xx-Nucleo/STM32F401VEHx_FLASH.ld
 #LDFILE     = $(EXAMPLE)/TrueSTUDIO/$(BOARD_UC)/$(MCU_UC)_FLASH.ld
 
 # Your C files from the /src directory
@@ -57,7 +57,8 @@ OCD_DIR    = /usr/share/openocd/scripts
 
 CUBE_DIR   = cube
 
-BSP_DIR    = $(CUBE_DIR)/Drivers/BSP/$(BOARD_UC)
+#BSP_DIR    = $(CUBE_DIR)/Drivers/BSP/$(BOARD_UC)
+BSP_DIR    = $(CUBE_DIR)/Drivers/BSP/STM32F4xx-Nucleo
 HAL_DIR    = $(CUBE_DIR)/Drivers/STM32F4xx_HAL_Driver
 CMSIS_DIR  = $(CUBE_DIR)/Drivers/CMSIS
 
@@ -84,7 +85,8 @@ OCD        = openocd
 # Options
 
 # Defines
-DEFS       = -D$(MCU_MC) -DUSE_HAL_DRIVER
+#DEFS       = -D$(MCU_MC) -DUSE_HAL_DRIVER
+DEFS       = -DSTM32F401xE -DUSE_HAL_DRIVER
 
 # Debug specific definitions for semihosting
 DEFS       += -DUSE_DBPRINTF
@@ -147,7 +149,7 @@ obj/%.o : %.c | dirs
 
 $(TARGET).elf: $(OBJS)
 	@echo "[LD]      $(TARGET).elf"
-	$Q$(CC) $(CFLAGS) $(LDFLAGS) src/startup_$(MCU_LC).s $^ -o $@
+	$Q$(CC) $(CFLAGS) $(LDFLAGS) src/startup_stm32f401xe.s $^ -o $@
 	@echo "[OBJDUMP] $(TARGET).lst"
 	$Q$(OBJDUMP) -St $(TARGET).elf >$(TARGET).lst
 	@echo "[SIZE]    $(TARGET).elf"
@@ -187,7 +189,7 @@ cube:
 template: cube src
 	cp -ri $(CUBE_DIR)/Projects/$(BOARD)/$(EXAMPLE)/Src/* src
 	cp -ri $(CUBE_DIR)/Projects/$(BOARD)/$(EXAMPLE)/Inc/* src
-	cp -i $(DEV_DIR)/Source/Templates/gcc/startup_$(MCU_LC).s src
+	cp -i $(DEV_DIR)/Source/Templates/gcc/startup_stm32f401xe.s src
 	cp -i $(CUBE_DIR)/Projects/$(BOARD)/$(LDFILE) $(MCU_LC).ld
 
 clean:

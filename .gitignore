@@ -8,10 +8,11 @@
 *.map
 
 # Makefile dependencies
-dep/
+build/dep/
 
 # Object directories
-obj/
+build/obj/
+build/bin/
 
 # Third-Party firmware from ST
 cube/

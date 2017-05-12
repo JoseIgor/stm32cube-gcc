@@ -15,55 +15,52 @@
 # License	http://www.gnu.org/licenses/gpl.txt GNU Public License
 # Author	Steffen Vogel <post@steffenvogel.de>
 # Link		http://www.steffenvogel.de
-#
-# edited for the STM32F4-Discovery
+
 
 # A name common to all output files (elf, map, hex, bin, lst)
 TARGET     = demo
 
-# Take a look into $(CUBE_DIR)/Drivers/BSP for available BSPs , BSP = Board Supported Package
-# name needed in upper case and lower case
-BOARD      = STM32F401RE-Nucleo
-BOARD_UC   = STM32F4xx_Nucleo
-BOARD_LC   = stm32f4xx_nucleo
-BSP_BASE   = $(BOARD_LC)
+# Take a look into $(CUBE_DIR)/Drivers/BSP for available BSPs . BSP = Board Supported Package.
+
+
+# Define the microcontroller that you'll use.
+# See cube/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h
+# in section "Device_Included" to get the correct DEF_MCU name.
+DEF_MCU = STM32F401xE
+
 
 OCDFLAGS   = -f board/st_nucleo_f4.cfg
 GDBFLAGS   =
 
-#EXAMPLE   = Templates
-EXAMPLE    = Examples/GPIO/GPIO_IOToggle
 
 # MCU family and type in various capitalizations o_O
-MCU_FAMILY = stm32f4xx
-MCU_LC     = stm32f401xx
-MCU_MC     = STM32F401xx
-MCU_UC     = STM32F401RE
 
+#EXAMPLE   = Templates
+EXAMPLE    = Examples/GPIO/GPIO_IOToggle
 # path of the ld-file inside the example directories
 LDFILE     = $(EXAMPLE)/SW4STM32/STM32F4xx-Nucleo/STM32F401VEHx_FLASH.ld
-#LDFILE     = $(EXAMPLE)/TrueSTUDIO/$(BOARD_UC)/$(MCU_UC)_FLASH.ld
 
 # Your C files from the /src directory
 SRCS       = main.c
-SRCS      += system_$(MCU_FAMILY).c
+SRCS      += system_stm32f4xx.c
 SRCS      += stm32f4xx_it.c
 
 # Basic HAL libraries
-SRCS      += stm32f4xx_hal_rcc.c stm32f4xx_hal_rcc_ex.c stm32f4xx_hal.c stm32f4xx_hal_cortex.c stm32f4xx_hal_gpio.c stm32f4xx_hal_pwr_ex.c $(BSP_BASE).c
+SRCS      += stm32f4xx_hal_rcc.c stm32f4xx_hal_rcc_ex.c 
+SRCS      += stm32f4xx_hal.c stm32f4xx_hal_cortex.c 
+SRCS      += stm32f4xx_hal_gpio.c stm32f4xx_hal_pwr_ex.c stm32f4xx_nucleo.c
 
 # Directories
 OCD_DIR    = /usr/share/openocd/scripts
 
 CUBE_DIR   = cube
 
-#BSP_DIR    = $(CUBE_DIR)/Drivers/BSP/$(BOARD_UC)
 BSP_DIR    = $(CUBE_DIR)/Drivers/BSP/STM32F4xx-Nucleo
 HAL_DIR    = $(CUBE_DIR)/Drivers/STM32F4xx_HAL_Driver
 CMSIS_DIR  = $(CUBE_DIR)/Drivers/CMSIS
-
 DEV_DIR    = $(CMSIS_DIR)/Device/ST/STM32F4xx
 
+#Download stm32cubef4 from internet
 CUBE_URL   = http://www.st.com/st-web-ui/static/active/en/st_prod_software_internet/resource/technical/software/firmware/stm32cubef4.zip
 
 # that's it, no need to change anything below this line!
@@ -85,14 +82,14 @@ OCD        = openocd
 # Options
 
 # Defines
-#DEFS       = -D$(MCU_MC) -DUSE_HAL_DRIVER
-DEFS       = -DSTM32F401xE -DUSE_HAL_DRIVER
+#Define the correct MCU to be used and enable the use of HAL libraries
+DEFS       = -D$(DEF_MCU) -DUSE_HAL_DRIVER
 
 # Debug specific definitions for semihosting
 DEFS       += -DUSE_DBPRINTF
 
 # Include search paths (-I)
-INCS       = -Isrc
+INCS       = -Iapp/inc
 INCS      += -I$(BSP_DIR)
 INCS      += -I$(CMSIS_DIR)/Include
 INCS      += -I$(DEV_DIR)/Include
@@ -109,19 +106,19 @@ CFLAGS    += -ffunction-sections -fdata-sections
 CFLAGS    += $(INCS) $(DEFS)
 
 # Linker flags
-LDFLAGS    = -Wl,--gc-sections -Wl,-Map=$(TARGET).map $(LIBS) -T$(MCU_LC).ld
+LDFLAGS    = -Wl,--gc-sections -Wl,-Map=build/bin/$(TARGET).map $(LIBS) -Tapp/stm32f401xx.ld
 
 # Enable Semihosting
 LDFLAGS   += --specs=rdimon.specs -lc -lrdimon
 
 # Source search paths
-VPATH      = ./src
+VPATH      = ./app/src
 VPATH     += $(BSP_DIR)
 VPATH     += $(HAL_DIR)/Src
 VPATH     += $(DEV_DIR)/Source/
 
-OBJS       = $(addprefix obj/,$(SRCS:.c=.o))
-DEPS       = $(addprefix dep/,$(SRCS:.c=.d))
+OBJS       = $(addprefix build/obj/,$(SRCS:.c=.o))
+DEPS       = $(addprefix build/dep/,$(SRCS:.c=.d))
 
 # Prettify output
 V = 0
@@ -134,36 +131,38 @@ endif
 
 .PHONY: all dirs program debug template clean
 
-all: $(TARGET).bin
+all: build/bin/$(TARGET).bin
 
 -include $(DEPS)
 
-dirs: dep obj cube  
-dep obj src:
-	@echo "[MKDIR]   $@"
+dirs: build/dep build/obj build/bin docs test app/src app/inc cube
+build/dep build/obj build/bin docs test app/src app/inc:
+	@echo "[MKDIR]  $@"
 	$Qmkdir -p $@
 
-obj/%.o : %.c | dirs
+build/obj/%.o : %.c | dirs
 	@echo "[CC]      $(notdir $<)"
-	$Q$(CC) $(CFLAGS) -c -o $@ $< -MMD -MF dep/$(*F).d
+	$Q$(CC) $(CFLAGS) -c -o $@ $< -MMD -MF build/dep/$(*F).d
 
-$(TARGET).elf: $(OBJS)
-	@echo "[LD]      $(TARGET).elf"
-	$Q$(CC) $(CFLAGS) $(LDFLAGS) src/startup_stm32f401xe.s $^ -o $@
-	@echo "[OBJDUMP] $(TARGET).lst"
-	$Q$(OBJDUMP) -St $(TARGET).elf >$(TARGET).lst
-	@echo "[SIZE]    $(TARGET).elf"
-	$(SIZE) $(TARGET).elf
+build/bin/$(TARGET).elf: $(OBJS)
+	@echo "[LD]      build/bin/$(TARGET).elf"
+	$Q$(CC) $(CFLAGS) $(LDFLAGS) app/src/startup_stm32f401xe.s $^ -o $@
+	@echo "[OBJDUMP] build/bin/$(TARGET).lst"
+	$Q$(OBJDUMP) -St build/bin/$(TARGET).elf >build/bin/$(TARGET).lst
+	@echo "[SIZE]    build/bin/$(TARGET).elf"
+	$(SIZE) build/bin/$(TARGET).elf
 
-$(TARGET).bin: $(TARGET).elf
-	@echo "[OBJCOPY] $(TARGET).bin"
+
+build/bin/$(TARGET).bin: build/bin/$(TARGET).elf
+	@echo "[OBJCOPY] build/bin/$(TARGET).bin"
 	$Q$(OBJCOPY) -O binary $< $@
+
 
 openocd:
 	$(OCD) -s $(OCD_DIR) $(OCDFLAGS)
 
 program: all
-	$(OCD) -s $(OCD_DIR) $(OCDFLAGS) -c "program $(TARGET).elf verify reset"
+	$(OCD) -s $(OCD_DIR) $(OCDFLAGS) -c "program build/bin/$(TARGET).elf verify reset"
 
 debug:
 	@if ! nc -z localhost 3333; then \
@@ -186,17 +185,17 @@ cube:
 	rm -f $$PWD/cube.zip
 
 
-template: cube src
-	cp -ri $(CUBE_DIR)/Projects/$(BOARD)/$(EXAMPLE)/Src/* src
-	cp -ri $(CUBE_DIR)/Projects/$(BOARD)/$(EXAMPLE)/Inc/* src
-	cp -i $(DEV_DIR)/Source/Templates/gcc/startup_stm32f401xe.s src
-	cp -i $(CUBE_DIR)/Projects/$(BOARD)/$(LDFILE) $(MCU_LC).ld
+template: cube app/src app/inc
+	cp -ri $(CUBE_DIR)/Projects/STM32F401RE-Nucleo/$(EXAMPLE)/Src/* app/src
+	cp -ri $(CUBE_DIR)/Projects/STM32F401RE-Nucleo/$(EXAMPLE)/Inc/* app/inc
+	cp -i $(DEV_DIR)/Source/Templates/gcc/startup_stm32f401xe.s app/src
+	cp -i $(CUBE_DIR)/Projects/STM32F401RE-Nucleo/$(LDFILE) app/stm32f401xx.ld
 
 clean:
-	@echo "[RM]      $(TARGET).bin"; rm -f $(TARGET).bin
-	@echo "[RM]      $(TARGET).elf"; rm -f $(TARGET).elf
-	@echo "[RM]      $(TARGET).map"; rm -f $(TARGET).map
-	@echo "[RM]      $(TARGET).lst"; rm -f $(TARGET).lst
-	@echo "[RMDIR]   dep"          ; rm -fr dep
-	@echo "[RMDIR]   obj"          ; rm -fr obj
+	@echo "[RM]      build/bin/$(TARGET).bin"; rm -f build/bin/$(TARGET).bin
+	@echo "[RM]      build/bin/$(TARGET).elf"; rm -f build/bin/$(TARGET).elf
+	@echo "[RM]      build/bin/$(TARGET).map"; rm -f build/bin/$(TARGET).map
+	@echo "[RM]      build/bin/$(TARGET).lst"; rm -f build/bin/$(TARGET).lst
+	@echo "[RMDIR]   build/dep"              ; rm -fr build/dep/*
+	@echo "[RMDIR]   build/obj"              ; rm -fr build/obj/*
 
